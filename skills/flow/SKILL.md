@@ -1,6 +1,6 @@
 ---
 name: flow
-description: Take a ticket, story, bug, or small task from the request to a proven change, with two human gates. Runs explore, plan, build, prove, and report in order, and never reports success without proof. Use when the user runs /flow with a ticket id or a task description, or asks to take a task end to end.
+description: Take a ticket, story, bug, or small task from the request to a proven change, with two human gates. Runs explore, plan, build, prove, and report in order, and never reports success without proof. Use when the user invokes flow with a ticket id or a task description, or asks to take a task end to end.
 argument-hint: "TICKET-123 | short description [autopilot]"
 ---
 
@@ -118,7 +118,8 @@ give the open items to the user.
 
 ## Stage 5: report
 
-Write `report.md` with the proof table from the `evidence` skill: each
+Write `report.md`, titled "Evidence report", with the proof table from the
+`evidence` skill: each
 acceptance point, its proof, its result. First line: the count of each result
 word. Then: what changed, what is still open, and what the user should look at
 first.
@@ -137,9 +138,13 @@ you are done: the commit is theirs.
   still applies. Anything that needs the user becomes `could-not-run` in the
   report, with the reason.
 - **`light`.** For a change of one or two files with no contract, schema, or
-  access change: no fresh agents, a short brief and plan in the conversation,
-  the same Gate A, the same proof rules.
-- **`standard`** is the default. **`full`** runs every review lens and every
+  access change, where the request fully describes the fix: no fresh agents, a
+  short brief and plan in the conversation, the same Gate A, the same proof
+  rules. Choose `light` yourself when all of that holds, and say that you did.
+  A full run starts several agents and each one loads its own context, so it
+  costs many times more. If you find more than you expected, switch to
+  `standard` and tell the user.
+- **`standard`** is the default for everything else. **`full`** runs every review lens and every
   proof step.
 
 ## Agents
