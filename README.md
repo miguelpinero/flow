@@ -102,9 +102,16 @@ Only the `skills/` folder is the product. The `evals/` folder holds the tests
 and a small demo API. You do not need it to use Flow, and the copy above does
 not install it.
 
-Flow was built and tested with Claude Code. The skills are plain instructions
-with no tool-specific code, so they should work in other agents that read skill
-folders. That is not tested yet.
+For the Codex CLI, copy them to `.agents/skills/` in the repo:
+
+```bash
+mkdir -p .agents/skills
+cp -R /tmp/flow/skills/* .agents/skills/
+```
+
+Flow is tested with Claude Code and with the Codex CLI. The skills are plain
+instructions with no tool-specific code, so they should work in other agents
+that read skill folders. Those are not tested.
 
 ## Use it
 
@@ -265,8 +272,17 @@ and then hid most of them:
 - One scenario I wrote as "correct" had a real bug. `review` found it.
 
 Each gap was fixed with one short rule. **The second round got 14 of 14 right**,
-on a large model and a small one. Both rounds are in
-[`evals/results`](evals/results), as the agents wrote them.
+on a large model and a small one.
+
+**The same set then ran in the Codex CLI and got 9 of 9.** Codex found every
+planted defect, changed no code in the checking skills, and stopped at the plan
+gate. On one scenario it was stricter than the expected answer: it also failed a
+test that never reads the response body. The full `flow` run in Codex ended
+before its last message because the session hit a usage limit, so that result
+comes from the report file it wrote.
+
+All three sets are in [`evals/results`](evals/results), as the agents wrote
+them.
 
 What this does not show: the second round ran the same scenarios as the first,
 so it proves the fixes work on those cases, not on new ones. Each case ran once
@@ -274,8 +290,8 @@ or twice, and models vary between runs. The demo API is five files.
 
 | Skill | Status |
 |---|---|
-| `prove-it`, `can-it-fail`, `review` | Tested on scenarios, two models |
-| `flow`, `onboard` | Tested with one chain run each, one model |
+| `prove-it`, `can-it-fail`, `review` | Tested on scenarios, in Claude Code (two models) and Codex |
+| `flow`, `onboard` | Tested with one chain run each, in Claude Code and Codex |
 | `evidence` | Tested through the skills that load it |
 | `explore`, `describe-pr` | Ran inside `flow` only |
 | `manual-test`, `design-check`, `house-rules`, `parallel` | Written, not tested |
@@ -286,18 +302,23 @@ Run the evals yourself:
 evals/run.sh archive-cross-user prove-it         # one skill on one scenario
 evals/run.sh weak-test can-it-fail haiku         # the same, on a small model
 evals/run-chain.sh flow-archive                  # the full chain, with its gate
+evals/run.sh archive-cross-user prove-it codex   # the same scenario in Codex
 ```
 
-You need [Bun](https://bun.sh) and the Claude Code CLI. A skill run costs a few
-cents. See [`evals/README.md`](evals/README.md).
+You need [Bun](https://bun.sh) and the Claude Code CLI, or the Codex CLI. A
+single skill run is cheap. A full `flow` run is not: see Limits. See [`evals/README.md`](evals/README.md).
 
 ## Limits
 
 - **Flow raises the floor, not the ceiling.** It makes a weak result visible. It
   does not make a weak plan good. The plan gate is only as good as the person
   who reads the plan.
-- **It costs tokens.** A full run uses several agent sessions. Use `light` for a
-  small fix, or run one skill.
+- **It costs tokens.** A full run uses several agent sessions, and each one
+  loads its own context. One full `flow` run on the five-file demo moved about
+  two million tokens in the main session alone, most of it cached input, and
+  about four million with the agents it started. A single skill such as
+  `review` or `prove-it` used about twenty thousand new tokens. Use `light` for
+  a small fix, or run one skill.
 - **It owns the process.** While `flow` runs, it decides the order of work. If
   you want to drive every step yourself, use the skills one at a time.
 - **`prove-it` is for HTTP backends.** Other kinds of change need their own
