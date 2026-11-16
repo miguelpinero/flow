@@ -40,6 +40,7 @@ The second row is the point. The unit tests for that change were green.
 - [Limits](#limits)
 - [Design notes](#design-notes)
 - [Contributing](#contributing)
+- [License](#license)
 
 ## The four result words
 
@@ -358,3 +359,7 @@ expected result.
 Keep skills short, keep the reason next to each rule, and keep anything specific
 to one team or one stack out of them. Team-specific knowledge belongs in a
 repo's `.flow/` folder.
+
+## License
+
+[MIT](LICENSE)
