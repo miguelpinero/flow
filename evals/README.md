@@ -14,6 +14,25 @@ correct answer is often not `passed`.
 | `weak-test` | One of three new tests cannot fail. | `can-it-fail` |
 | `blocked-login` | Login needs a service that is not available. | `prove-it` |
 
+## Chains
+
+A chain is a conversation with more than one user message. It can test a gate:
+the first message must end at a stop, and the second gives the approval.
+
+| Chain | Checks |
+|---|---|
+| `flow-archive` | `flow` stops at the plan gate with no code changed, then builds, proves, and reports |
+| `onboard` | `onboard` shows its files and questions first, and writes only after a yes |
+
+```
+evals/run-chain.sh flow-archive sonnet
+```
+
+## Results
+
+`results/round-1` is the first run. It exposed three gaps in the skills and one
+mistake in a scenario. `results/round-2` is the run after the fixes.
+
 ## Run one
 
 ```
