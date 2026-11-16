@@ -18,7 +18,7 @@ dir="$root/evals/scenarios/$scenario"
 [[ -d "$root/skills/$skill" ]] || { echo "unknown skill: $skill" >&2; exit 2; }
 
 work="$(mktemp -d)/notes-api"
-cp -R "$root/demo/notes-api" "$work"
+cp -R "$root/evals/demo/notes-api" "$work"
 rm -rf "$work/data" "$work/node_modules"
 cd "$work"
 git init -q -b main

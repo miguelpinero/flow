@@ -1,6 +1,6 @@
 # Evals
 
-Each scenario is a change to the demo API in `demo/notes-api`. Most of them have
+Each scenario is a change to the demo API in `evals/demo/notes-api`. Most of them have
 one planted defect. A skill passes a scenario when its report matches
 `expected.md`: it finds the defect, or it says it could not check.
 
@@ -33,6 +33,15 @@ evals/run-chain.sh flow-archive sonnet
 `results/round-1` is the first run. It exposed three gaps in the skills and one
 mistake in a scenario. `results/round-2` is the run after the fixes.
 
+## Before you run
+
+- [Bun](https://bun.sh), for the demo API.
+- The Claude Code CLI, logged in. Each run is a paid agent session: a few cents
+  for one skill, more for a chain.
+- The agent runs unattended with shell access, inside a temporary copy of the
+  demo API. It does not touch this repo, except to write its report to
+  `evals/results/`.
+
 ## Run one
 
 ```
@@ -40,9 +49,17 @@ evals/run.sh <scenario> <skill> [model]
 evals/run.sh weak-test can-it-fail haiku
 ```
 
-The runner copies the demo API to a temporary repo, applies the change on a
-branch, installs the skills, and starts an unattended agent session that loads
-no user settings. The agent never sees `expected.md`. The report is written to
-`evals/results/`. Read it next to `expected.md`.
+What the runner does:
+
+1. Copies `evals/demo/notes-api` to a temporary folder and makes it a git repo.
+2. Applies the scenario's `change.patch` on a branch and commits it.
+3. Copies `skills/` into that repo, so the run tests the skills as they are now.
+4. Starts one agent session with the scenario's `task.md` and the name of the
+   skill. The session loads no user settings, and it never sees `expected.md`.
+5. Writes the agent's final report to `evals/results/latest/`, and prints any
+   file the agent left changed.
+
+Then read the report next to the scenario's `expected.md`. Set `EVAL_ROUND=name`
+to write to another results folder.
 
 The grading is by reading. A scenario is short, and a wrong pass is easy to see.
