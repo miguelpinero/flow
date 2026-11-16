@@ -1,2 +1,2 @@
-evals/results/*.json
-evals/results/*.log
+evals/results/**/*.json
+evals/results/**/*.log

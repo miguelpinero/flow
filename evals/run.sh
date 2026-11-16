@@ -33,6 +33,7 @@ cp -R "$root/skills" .claude/skills
 echo ".claude/" >> .git/info/exclude
 
 prompt="Use the $skill skill on this branch. The base branch is main.
+The change for the task below is already implemented and committed on this branch.
 
 $(cat "$dir/task.md")
 
@@ -40,8 +41,9 @@ You run unattended. Nobody can answer a question, so do not wait for one.
 You may start the dev server yourself on a free port. Stop it when you finish.
 Run to the final report and print the full report as your last message."
 
-out="$root/evals/results/$scenario.$skill.$model"
-mkdir -p "$root/evals/results"
+results="$root/evals/results/${EVAL_ROUND:-latest}"
+out="$results/$scenario.$skill.$model"
+mkdir -p "$results"
 claude -p "$prompt" \
   --model "$model" \
   --setting-sources project \
