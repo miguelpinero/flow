@@ -1,0 +1,99 @@
+diff --git a/README.md b/README.md
+index d49f05c..470ad1a 100644
+--- a/README.md
++++ b/README.md
+@@ -34,5 +34,6 @@ Send the token as `Authorization: Bearer <token>`.
+ | `GET /notes` | Lists your notes |
+ | `POST /notes` | Creates a note: `title` (1 to 120 characters), `body` (optional) |
+ | `GET /notes/:id` | Returns one of your notes |
++| `POST /notes/:id/archive` | Archives one of your notes. It leaves the list. |
+ 
+ The database file is `data/notes.db`. Set `NOTES_DB` to use another path.
+diff --git a/src/app.ts b/src/app.ts
+index e226efa..4df6452 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,7 +1,7 @@
+ import type { Database } from "bun:sqlite";
+ import { login, userFromRequest } from "./auth";
+ 
+-type NoteRow = { id: number; owner_id: number; title: string; body: string; created_at: string };
++type NoteRow = { id: number; owner_id: number; title: string; body: string; archived: number; created_at: string };
+ 
+ const json = (data: unknown, status = 200) => Response.json(data, { status });
+ 
+@@ -9,6 +9,7 @@ const toNote = (row: NoteRow) => ({
+   id: row.id,
+   title: row.title,
+   body: row.body,
++  archived: row.archived === 1,
+   createdAt: row.created_at,
+ });
+ 
+@@ -42,7 +43,7 @@ export function createApp(db: Database) {
+ 
+     if (pathname === "/notes" && method === "GET") {
+       const rows = db
+-        .query("SELECT * FROM notes WHERE owner_id = ? ORDER BY id")
++        .query("SELECT * FROM notes WHERE owner_id = ? AND archived = 0 ORDER BY id")
+         .all(user.id) as NoteRow[];
+       return json({ items: rows.map(toNote) });
+     }
+@@ -69,6 +70,14 @@ export function createApp(db: Database) {
+       return json(toNote(row));
+     }
+ 
++    const archive = pathname.match(/^\/notes\/(\d+)\/archive$/);
++    if (archive && method === "POST") {
++      const row = db.query("SELECT * FROM notes WHERE id = ?").get(Number(archive[1])) as NoteRow | null;
++      if (!row || row.owner_id !== user.id) return json({ error: "not found" }, 404);
++      db.query("UPDATE notes SET archived = 1 WHERE id = ?").run(row.id);
++      return new Response(null, { status: 204 });
++    }
++
+     return json({ error: "not found" }, 404);
+   };
+ }
+diff --git a/src/db.ts b/src/db.ts
+index 5d97dfc..8ab0316 100644
+--- a/src/db.ts
++++ b/src/db.ts
+@@ -26,6 +26,7 @@ export function openDb(path = process.env.NOTES_DB ?? "data/notes.db"): Database
+     owner_id INTEGER NOT NULL REFERENCES users(id),
+     title TEXT NOT NULL,
+     body TEXT NOT NULL DEFAULT '',
++    archived INTEGER NOT NULL DEFAULT 0,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`);
+   const count = db.query("SELECT COUNT(*) AS n FROM users").get() as { n: number };
+diff --git a/test/archive.test.ts b/test/archive.test.ts
+new file mode 100644
+index 0000000..1301732
+--- /dev/null
++++ b/test/archive.test.ts
+@@ -0,0 +1,25 @@
++import { describe, expect, test } from "bun:test";
++import { setup } from "./helpers";
++
++describe("archive", () => {
++  test("archives a note and removes it from the list", async () => {
++    const { call, alice } = setup();
++    const note = await (await call("POST", "/notes", alice, { title: "Old" })).json();
++    expect((await call("POST", `/notes/${note.id}/archive`, alice)).status).toBe(204);
++    const list = await (await call("GET", "/notes", alice)).json();
++    expect(list.items).toEqual([]);
++  });
++
++  test("returns 404 for an unknown note", async () => {
++    const { call, alice } = setup();
++    expect((await call("POST", "/notes/999/archive", alice)).status).toBe(404);
++  });
++
++  test("does not let another user archive the note", async () => {
++    const { call, alice, bob } = setup();
++    const note = await (await call("POST", "/notes", alice, { title: "Mine" })).json();
++    expect((await call("POST", `/notes/${note.id}/archive`, bob)).status).toBe(404);
++    const list = await (await call("GET", "/notes", alice)).json();
++    expect(list.items.length).toBe(1);
++  });
++});

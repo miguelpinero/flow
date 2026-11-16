@@ -1,0 +1,71 @@
+diff --git a/README.md b/README.md
+index d49f05c..b2e8cab 100644
+--- a/README.md
++++ b/README.md
+@@ -34,5 +34,6 @@ Send the token as `Authorization: Bearer <token>`.
+ | `GET /notes` | Lists your notes |
+ | `POST /notes` | Creates a note: `title` (1 to 120 characters), `body` (optional) |
+ | `GET /notes/:id` | Returns one of your notes |
++| `PATCH /notes/:id` | Renames one of your notes: `title` (1 to 120 characters) |
+ 
+ The database file is `data/notes.db`. Set `NOTES_DB` to use another path.
+diff --git a/src/app.ts b/src/app.ts
+index e226efa..c6c32d4 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -69,6 +69,20 @@ export function createApp(db: Database) {
+       return json(toNote(row));
+     }
+ 
++    if (match && method === "PATCH") {
++      const row = db.query("SELECT * FROM notes WHERE id = ?").get(Number(match[1])) as NoteRow | null;
++      if (!row || row.owner_id !== user.id) return json({ error: "not found" }, 404);
++      const body = await readJson(req);
++      const title = typeof body?.title === "string" ? body.title.trim() : "";
++      if (title.length === 0 || title.length > 120) {
++        return json({ error: "title must be 1 to 120 characters" }, 400);
++      }
++      const updated = db
++        .query("UPDATE notes SET title = ? WHERE id = ? RETURNING *")
++        .get(title, row.id) as NoteRow;
++      return json(toNote(updated));
++    }
++
+     return json({ error: "not found" }, 404);
+   };
+ }
+diff --git a/test/rename.test.ts b/test/rename.test.ts
+new file mode 100644
+index 0000000..bd5f5d1
+--- /dev/null
++++ b/test/rename.test.ts
+@@ -0,0 +1,29 @@
++import { describe, expect, test } from "bun:test";
++import { setup } from "./helpers";
++
++describe("rename", () => {
++  test("renames a note", async () => {
++    const { call, alice } = setup();
++    const note = await (await call("POST", "/notes", alice, { title: "Old" })).json();
++    const res = await call("PATCH", `/notes/${note.id}`, alice, { title: "New" });
++    expect(res.status).toBe(200);
++    const saved = await (await call("GET", `/notes/${note.id}`, alice)).json();
++    expect(saved.title).toBe("New");
++  });
++
++  test("rejects an empty title", async () => {
++    const { call, alice } = setup();
++    const note = await (await call("POST", "/notes", alice, { title: "Keep" })).json();
++    const res = await call("PATCH", `/notes/${note.id}`, alice, { title: "  " });
++    expect(res).toBeDefined();
++    expect(res.status).not.toBe(500);
++  });
++
++  test("does not rename another user's note", async () => {
++    const { call, alice, bob } = setup();
++    const note = await (await call("POST", "/notes", alice, { title: "Mine" })).json();
++    expect((await call("PATCH", `/notes/${note.id}`, bob, { title: "Taken" })).status).toBe(404);
++    const saved = await (await call("GET", `/notes/${note.id}`, alice)).json();
++    expect(saved.title).toBe("Mine");
++  });
++});

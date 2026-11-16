@@ -1,0 +1,203 @@
+diff --git a/README.md b/README.md
+index d49f05c..c0914dd 100644
+--- a/README.md
++++ b/README.md
+@@ -10,27 +10,19 @@ bun test
+ 
+ ## Log in
+ 
+-Two demo users exist after the first start. They are public test accounts.
++Login moved to the team's identity service. This API no longer has passwords.
++Set `IDENTITY_URL` to the identity service before you start the server. The API
++sends each bearer token to `IDENTITY_URL/userinfo`.
+ 
+-| Email | Password |
+-|---|---|
+-| alice@example.test | alice-demo-password |
+-| bob@example.test | bob-demo-password |
+-
+-```
+-curl -s -X POST localhost:3210/login \
+-  -H 'content-type: application/json' \
+-  -d '{"email":"alice@example.test","password":"alice-demo-password"}'
+-```
+-
+-Send the token as `Authorization: Bearer <token>`.
++There is no local copy of the identity service. Use the shared development
++instance. Ask the platform team for its address and a test account.
+ 
+ ## Endpoints
+ 
+ | Request | Does |
+ |---|---|
+ | `GET /health` | Health check, no login |
+-| `POST /login` | Returns a session token |
++| `GET /me` | Returns the email of the session user |
+ | `GET /notes` | Lists your notes |
+ | `POST /notes` | Creates a note: `title` (1 to 120 characters), `body` (optional) |
+ | `GET /notes/:id` | Returns one of your notes |
+diff --git a/src/app.ts b/src/app.ts
+index e226efa..f0247df 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,5 +1,5 @@
+ import type { Database } from "bun:sqlite";
+-import { login, userFromRequest } from "./auth";
++import { userFromRequest } from "./auth";
+ 
+ type NoteRow = { id: number; owner_id: number; title: string; body: string; created_at: string };
+ 
+@@ -29,17 +29,14 @@ export function createApp(db: Database) {
+     if (method === "GET" && pathname === "/health") return json({ ok: true });
+ 
+     if (method === "POST" && pathname === "/login") {
+-      const body = await readJson(req);
+-      if (!body || typeof body.email !== "string" || typeof body.password !== "string") {
+-        return json({ error: "email and password are required" }, 400);
+-      }
+-      const token = login(db, body.email, body.password);
+-      return token ? json({ token }) : json({ error: "invalid credentials" }, 401);
++      return json({ error: "login moved to the identity service" }, 410);
+     }
+ 
+-    const user = userFromRequest(db, req);
++    const user = await userFromRequest(db, req);
+     if (!user) return json({ error: "unauthorized" }, 401);
+ 
++    if (pathname === "/me" && method === "GET") return json({ email: user.email });
++
+     if (pathname === "/notes" && method === "GET") {
+       const rows = db
+         .query("SELECT * FROM notes WHERE owner_id = ? ORDER BY id")
+diff --git a/src/auth.ts b/src/auth.ts
+index 688abe9..f313d06 100644
+--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -2,26 +2,20 @@ import type { Database } from "bun:sqlite";
+ 
+ export type User = { id: number; email: string };
+ 
+-export function hashPassword(password: string): string {
+-  return new Bun.CryptoHasher("sha256").update(`notes-demo:${password}`).digest("hex");
++// Sessions now come from the identity service. This API only checks the token.
++export function identityUrl(): string {
++  const url = process.env.IDENTITY_URL;
++  if (!url) throw new Error("IDENTITY_URL is required");
++  return url.replace(/\/$/, "");
+ }
+ 
+-export function login(db: Database, email: string, password: string): string | null {
+-  const row = db
+-    .query("SELECT id FROM users WHERE email = ? AND password_hash = ?")
+-    .get(email, hashPassword(password)) as { id: number } | null;
+-  if (!row) return null;
+-  const token = crypto.randomUUID();
+-  db.query("INSERT INTO sessions (token, user_id) VALUES (?, ?)").run(token, row.id);
+-  return token;
+-}
+-
+-export function userFromRequest(db: Database, req: Request): User | null {
++export async function userFromRequest(db: Database, req: Request): Promise<User | null> {
+   const header = req.headers.get("authorization") ?? "";
+   if (!header.startsWith("Bearer ")) return null;
+-  return db
+-    .query(
+-      "SELECT users.id AS id, users.email AS email FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?",
+-    )
+-    .get(header.slice(7)) as User | null;
++  const res = await fetch(`${identityUrl()}/userinfo`, { headers: { authorization: header } });
++  if (!res.ok) return null;
++  const info = (await res.json()) as { email?: string };
++  if (!info.email) return null;
++  db.query("INSERT OR IGNORE INTO users (email, password_hash) VALUES (?, '')").run(info.email);
++  return db.query("SELECT id, email FROM users WHERE email = ?").get(info.email) as User;
+ }
+diff --git a/src/db.ts b/src/db.ts
+index 5d97dfc..ec22560 100644
+--- a/src/db.ts
++++ b/src/db.ts
+@@ -1,13 +1,6 @@
+ import { Database } from "bun:sqlite";
+ import { mkdirSync } from "node:fs";
+ import { dirname } from "node:path";
+-import { hashPassword } from "./auth";
+-
+-// Demo users. These are public test accounts for a local demo, not secrets.
+-const DEMO_USERS = [
+-  { email: "alice@example.test", password: "alice-demo-password" },
+-  { email: "bob@example.test", password: "bob-demo-password" },
+-];
+ 
+ export function openDb(path = process.env.NOTES_DB ?? "data/notes.db"): Database {
+   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
+@@ -28,10 +21,5 @@ export function openDb(path = process.env.NOTES_DB ?? "data/notes.db"): Database
+     body TEXT NOT NULL DEFAULT '',
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   )`);
+-  const count = db.query("SELECT COUNT(*) AS n FROM users").get() as { n: number };
+-  if (count.n === 0) {
+-    const insert = db.query("INSERT INTO users (email, password_hash) VALUES (?, ?)");
+-    for (const user of DEMO_USERS) insert.run(user.email, hashPassword(user.password));
+-  }
+   return db;
+ }
+diff --git a/src/server.ts b/src/server.ts
+index 87636d6..013d3e4 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -1,6 +1,8 @@
+ import { createApp } from "./app";
++import { identityUrl } from "./auth";
+ import { openDb } from "./db";
+ 
++identityUrl(); // fail at start when the identity service is not configured
+ const port = Number(process.env.PORT ?? 3210);
+ const server = Bun.serve({ port, fetch: createApp(openDb()) });
+ console.log(`notes-api listening on http://localhost:${server.port}`);
+diff --git a/test/helpers.ts b/test/helpers.ts
+index 6fab992..e442a04 100644
+--- a/test/helpers.ts
++++ b/test/helpers.ts
+@@ -1,12 +1,17 @@
+ import { createApp } from "../src/app";
+-import { login } from "../src/auth";
+ import { openDb } from "../src/db";
+ 
++// The identity service is replaced by a stub in unit tests.
++const USERS: Record<string, string> = { "alice-token": "alice@example.test", "bob-token": "bob@example.test" };
++
+ export function setup() {
++  process.env.IDENTITY_URL = "http://identity.stub";
++  globalThis.fetch = (async (_url: string, init?: RequestInit) => {
++    const token = String(new Headers(init?.headers).get("authorization") ?? "").slice(7);
++    return USERS[token] ? Response.json({ email: USERS[token] }) : new Response(null, { status: 401 });
++  }) as typeof fetch;
+   const db = openDb(":memory:");
+   const handle = createApp(db);
+-  const alice = login(db, "alice@example.test", "alice-demo-password")!;
+-  const bob = login(db, "bob@example.test", "bob-demo-password")!;
+   const call = (method: string, path: string, token?: string, body?: unknown) =>
+     handle(
+       new Request(`http://test${path}`, {
+@@ -18,5 +23,5 @@ export function setup() {
+         body: body !== undefined ? JSON.stringify(body) : undefined,
+       }),
+     );
+-  return { db, call, alice, bob };
++  return { db, call, alice: "alice-token", bob: "bob-token" };
+ }
+diff --git a/test/me.test.ts b/test/me.test.ts
+new file mode 100644
+index 0000000..db0f85f
+--- /dev/null
++++ b/test/me.test.ts
+@@ -0,0 +1,9 @@
++import { expect, test } from "bun:test";
++import { setup } from "./helpers";
++
++test("returns the email of the session user", async () => {
++  const { call, alice } = setup();
++  const res = await call("GET", "/me", alice);
++  expect(res.status).toBe(200);
++  expect(await res.json()).toEqual({ email: "alice@example.test" });
++});
