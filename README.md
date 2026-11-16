@@ -1,152 +1,72 @@
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
+    <img alt="Flow: ship a change with proof, not with a promise. A report with one passed, one failed, and one could-not-run result." src="assets/banner-light.svg" width="880">
+  </picture>
+</p>
+
 # Flow
 
-Agent skills for shipping a change with proof.
+Agent skills that make a coding agent prove its work before it says "done".
 
-An AI agent will tell you a change works. Often it did not check. It ran the
-unit tests, saw green, and wrote "done". Or it could not log in, so it tested
-what it could reach and reported that as success.
+Coding agents are good at building. They are bad at telling you the truth about what they built. The tests pass, so the agent says it works. It could not log in, so it tested what it could reach and called that a success. You find out in review, or in production.
 
-Flow is a set of twelve skills built around one rule: **no result without
-proof.** Before the agent says a change works, it shows what it ran and what
-came back. When it cannot check something, it says so in the report.
+I got tired of that. These are the skills I use to stop it. They are built on one rule: **no result without proof.** The agent shows what it ran and what came back. When it could not check something, it says so, in the report, where you can see it.
 
-This is what a Flow report looks like:
+They are small, plain markdown, and each one works alone. Take one, take all twelve, or change them to fit your team.
 
-```
-3 passed, 1 failed, 0 not-run, 1 could-not-run
+## Quickstart
 
-| Acceptance point               | Proof                                               | Result        |
-|--------------------------------|-----------------------------------------------------|---------------|
-| A user can archive a note      | POST /notes/7/archive returned 204. GET /notes      | passed        |
-|                                | then omitted note 7.                                |               |
-| Another user cannot archive it | The same request as a second user returned 204.     | failed        |
-|                                | The note left the owner's list.                     |               |
-| The button matches the design  | No design file was available.                       | could-not-run |
-```
+### 1. Get the skills
 
-The second row is the point. The unit tests for that change were green.
-
-## Contents
-
-- [The four result words](#the-four-result-words)
-- [The skills](#the-skills)
-- [Install](#install)
-- [Use it](#use-it)
-- [How a run works](#how-a-run-works)
-- [The .flow folder](#the-flow-folder)
-- [Using one skill alone](#using-one-skill-alone)
-- [What Flow will not do](#what-flow-will-not-do)
-- [Does it work?](#does-it-work)
-- [Limits](#limits)
-- [Design notes](#design-notes)
-- [Contributing](#contributing)
-- [License](#license)
-
-## The four result words
-
-Every result in every skill is one of these. No other word is allowed, and none
-of them can be softened.
-
-| Word | Meaning |
-|---|---|
-| `passed` | The check ran after the last change and gave the expected result. The proof is next to it. |
-| `failed` | The check ran and the result was wrong. |
-| `not-run` | The agent decided not to run the check, and says why. |
-| `could-not-run` | The agent tried and something blocked it. It says what, and what would unblock it. |
-
-The last two are honest results, not failures to hide. A report with three
-`passed` and one `could-not-run` is a good report. A report with four `passed`
-where one never ran is a false report.
-
-The full rules, including the list of things that do not count as a pass, are in
-[`skills/evidence`](skills/evidence/SKILL.md). It is short, and it is the core
-of the project.
-
-## The skills
-
-| Skill | What it does | Use it alone when |
-|---|---|---|
-| [`flow`](skills/flow/SKILL.md) | Takes a task from the request to a proven change, with two human gates. | You want the whole chain. |
-| [`onboard`](skills/onboard/SKILL.md) | Reads a repo once and writes down how to test, run, and log in. | You set up Flow in a new repo. |
-| [`explore`](skills/explore/SKILL.md) | Scopes a task before any plan. Finds the one risky assumption and tests it on the real system. | You want a task understood before anyone commits to an approach. |
-| [`can-it-fail`](skills/can-it-fail/SKILL.md) | Breaks the code under each new test and checks that the test goes red. | Someone, or something, just wrote tests and you want to know if they prove anything. |
-| [`prove-it`](skills/prove-it/SKILL.md) | Finds the endpoints the diff reaches and calls them on the running server as a real user. | You changed a backend and want to know it works over the wire. |
-| [`review`](skills/review/SKILL.md) | Read-only review of the branch diff, one focus at a time. Every finding is checked against the source. | You want a second look before a push. |
-| [`design-check`](skills/design-check/SKILL.md) | Measures the rendered page against the design, in pixels and colors. | You built a page from a design. |
-| [`manual-test`](skills/manual-test/SKILL.md) | Seeds the data, logs in, opens the page. You only test. | You want to try the change by hand. |
-| [`describe-pr`](skills/describe-pr/SKILL.md) | Writes pull request text from the real diff. Never invents a test result. | Your team uses pull requests. |
-| [`evidence`](skills/evidence/SKILL.md) | The shared rules for reporting a result. The other skills load it. | You want any agent report to be honest. |
-| [`house-rules`](skills/house-rules/SKILL.md) | Reads the review comments on merged pull requests and turns the repeated ones into rules. | You want `review` to apply your team's own standards. |
-| [`parallel`](skills/parallel/SKILL.md) | Runs several tasks at once, each in its own worktree. | You have independent tasks and a tool that can run sessions in parallel. |
-
-Not all of them are tested yet. See [Does it work?](#does-it-work)
-
-## Install
-
-The skills are folders of plain markdown. Copy them into your agent's skills
-directory.
-
-For Claude Code, in one repo:
+<details open>
+<summary><strong>Claude Code</strong></summary>
 
 ```bash
 git clone https://github.com/miguelpinero/flow.git /tmp/flow
-mkdir -p .claude/skills
-cp -R /tmp/flow/skills/* .claude/skills/
+mkdir -p .claude/skills && cp -R /tmp/flow/skills/* .claude/skills/
 ```
 
-For all your repos, copy to `~/.claude/skills/` instead.
+Use `~/.claude/skills/` instead to have them in every repo.
 
-You can copy one skill. If you do, copy `evidence` too, because the others load
-it.
+</details>
 
-Only the `skills/` folder is the product. The `evals/` folder holds the tests
-and a small demo API. You do not need it to use Flow, and the copy above does
-not install it.
-
-For the Codex CLI, copy them to `.agents/skills/` in the repo:
+<details>
+<summary><strong>Codex</strong></summary>
 
 ```bash
-mkdir -p .agents/skills
-cp -R /tmp/flow/skills/* .agents/skills/
+git clone https://github.com/miguelpinero/flow.git /tmp/flow
+mkdir -p .agents/skills && cp -R /tmp/flow/skills/* .agents/skills/
 ```
 
-Flow is tested with Claude Code and with the Codex CLI. The skills are plain
-instructions with no tool-specific code, so they should work in other agents
-that read skill folders. Those are not tested.
+</details>
 
-## Use it
+<details>
+<summary><strong>Just one skill</strong></summary>
 
-**First, once for each repo:**
+Copy its folder, plus `evidence`. Every other skill loads `evidence` for the reporting rules.
 
+```bash
+cp -R /tmp/flow/skills/prove-it /tmp/flow/skills/evidence .claude/skills/
 ```
-/onboard
-```
 
-It reads the repo, shows you what it found, asks five preferences, and writes a
-`.flow/` folder after you say yes. You can skip this. Each skill then finds its
-own facts on every run, which is slower.
+</details>
 
-**Then, for a task:**
+### 2. Run `/onboard`
+
+Once per repo. It reads the repo, shows you what it found, and asks five questions. Then it writes a small `.flow/` folder: how to test here, how to run the server, how to log in, whether it may commit. You can skip this step. The skills then look these things up on every run, which is slower.
+
+### 3. Hand it a task
 
 ```
 /flow PROJ-123
 /flow add an archive endpoint for notes
 ```
 
-Flow reads the task and the code, writes a plan, and stops. You read the plan
-and answer. After your yes, it builds, proves, and reports. It stops again
-before any commit.
+It reads the task and the code, writes a plan, and stops. Nothing is built until you approve. Then it builds, proves, and reports, and stops again before any commit.
 
-To skip the questions between the plan and the report:
-
-```
-/flow PROJ-123 autopilot
-```
-
-The plan gate still applies. Anything that needs you later is marked
-`could-not-run` in the report, with the reason.
-
-**Or one skill at a time:**
+Or skip the chain and run one check on the branch you already have:
 
 ```
 /prove-it
@@ -154,211 +74,132 @@ The plan gate still applies. Anything that needs you later is marked
 /review
 ```
 
+## Why these skills exist
+
+Each one fixes a way an agent has fooled me.
+
+### #1: "All tests pass"
+
+> "Program testing can be used to show the presence of bugs, but never to show their absence!"
+>
+> Edsger Dijkstra
+
+**The problem.** The agent wrote the code and the tests in the same breath. The tests are green. But a test like `expect(res.status).not.toBe(500)` is green whether the feature works or not. A test that cannot fail is decoration.
+
+**The fix** is [`/can-it-fail`](skills/can-it-fail/SKILL.md). For every new test, it breaks the code the test claims to protect, runs the test, and checks that it goes red. Then it puts the code back and proves it did. If the test stays green with the feature removed, you hear about it.
+
+### #2: "It works"
+
+**The problem.** Unit tests run in a small, friendly world. In one of the scenarios in this repo, an agent adds an endpoint to archive a note, with tests, all green. Any logged-in user can archive anyone else's note. No unit test asked.
+
+**The fix** is [`/prove-it`](skills/prove-it/SKILL.md). It starts from the diff, finds the endpoints the change can reach, and calls them on the running server as a real logged-in user, and then as a second user. It checks the status, the body, and what was saved. A pass means a real request ran the real code. Nothing else counts: not a green build, not a route that exists, not a `401` that never reached your change.
+
+### #3: "Verified" (it was not)
+
+> "The first principle is that you must not fool yourself—and you are the easiest person to fool."
+>
+> Richard Feynman
+
+**The problem.** Sometimes the agent cannot check. The login service is down, there is no test account, there is no design file. A person says "I couldn't test this". An agent tends to test something nearby and report success.
+
+**The fix** is [`evidence`](skills/evidence/SKILL.md), the rules every skill here reports by. There are exactly four results, and no softer versions of them:
+
+| Result | Meaning |
+|---|---|
+| `passed` | It ran after the last change, and here is the output. |
+| `failed` | It ran, and the result was wrong. |
+| `not-run` | The agent chose not to run it, and says why. |
+| `could-not-run` | Something blocked it. Here is what, and what would unblock it. |
+
+A report with three `passed` and one `could-not-run` is a good report. Four `passed` where one never ran is a lie. The skill also lists what never counts as a pass, including a mock the agent builds itself when the real service is missing.
+
+### #4: "I fixed it for you"
+
+**The problem.** This one surprised me. In the first test of these skills, the agent found the bug from #2, quietly fixed it, ran the checks again, and reported "6 passed, 0 failed". It was trying to help. It also erased the one fact I needed: the branch was broken.
+
+**The fix** is a rule in every checking skill. [`/prove-it`](skills/prove-it/SKILL.md), [`/can-it-fail`](skills/can-it-fail/SKILL.md), and [`/review`](skills/review/SKILL.md) do not edit code. They report the branch as they found it. A fix is a separate step that you can see.
+
+### #5: It built the wrong thing
+
+**The problem.** Most tasks rest on one assumption. Which id does the API key on? Does the delete cascade? What does the other service return? If the agent guesses wrong, it builds the wrong thing, well.
+
+**The fix** is [`/explore`](skills/explore/SKILL.md), then a gate. `explore` reads the task and the code, names the one assumption that would break the work, and tests it on the real system before any plan exists. [`/flow`](skills/flow/SKILL.md) turns that into a plan, has a second agent attack it, and stops. You read the plan. Nothing is built until you say yes.
+
+### Summary
+
+None of this is new. Test your tests. Try it for real. Say what you did not check. Get the plan agreed before you build. These are habits good engineers already have. The skills make an agent keep them when nobody is watching.
+
 ## How a run works
 
-```mermaid
-flowchart LR
-    T([Task]) --> E[explore]
-    E --> P[plan]
-    P --> A{Gate A<br/>you approve}
-    A -- changes --> P
-    A -- approved --> B[build]
-    B --> V[prove]
-    V -- failed, 3 tries max --> B
-    V --> R[report]
-    R --> G([Gate B<br/>you commit])
-```
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/run-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/run-light.svg">
+    <img alt="One Flow run: onboard, explore, plan, your approval, build, prove, report, optional pull request text, your commit. A rejected plan returns to plan. A failed proof returns to build, three times at most." src="assets/run-light.svg" width="880">
+  </picture>
+</p>
 
-| Stage | What happens | Output |
-|---|---|---|
-| explore | Reads the task and the code. Names the one assumption that would break the work, and tests it. Changes nothing. | `brief.md` |
-| plan | Splits the work into small slices, each with its test and its proof. A second agent challenges the plan. | `plan.md` |
-| **Gate A** | The full plan is printed. Nothing is built until you say yes. | |
-| build | Writes the test first for a behavior change, then the code. | the diff |
-| prove | Runs the proof steps that apply: `can-it-fail`, `prove-it`, `design-check`, `review`, `manual-test`. A failure goes back to build, three attempts at most. | `checks/*.md` |
-| report | One row for each acceptance point, with its proof and its result. | `report.md` |
-| **Gate B** | You review the diff and the report. By default the commit is yours. | |
+There are two stops, and both are yours. At **Gate A** you approve the plan. At **Gate B** you review the diff and the report, and you commit. By default Flow never commits.
 
-The prove stage is what Flow adds. Most agent workflows have the other stages.
+The skills do not call each other. Each one writes a file in `.flow/runs/<task>/` and the next one reads it: the brief, the plan, one result file for each check, the report. That is why every skill also works alone. The diff is always enough to start, the files make the result better, and the report says what was missing.
 
-## The .flow folder
-
-The skills do not call each other. Each one reads some files and writes one, and
-the next skill reads that. This is why each skill also works alone.
+Add `autopilot` to run from the approved plan to the report without questions:
 
 ```
-.flow/
-  profile.md        facts about the repo, and your preferences     committed
-  proof.md          how to prove a change here: commands, login    committed
-  house-rules.md    what your reviewers ask for                    committed
-  local/            personal settings                              not committed
-  runs/PROJ-123/    one folder for each task                       not committed
-    brief.md        written by explore
-    plan.md         written by flow, approved by you
-    checks/         one result file for each proof skill
-    report.md       the proof table
-    pr.md           written by describe-pr
+/flow PROJ-123 autopilot
 ```
-
-Everything in it is markdown that a person can read and correct. No secret goes
-in these files: the skills write where a value lives, never the value.
-
-Preferences are asked once, during `onboard`:
-
-| Preference | Options | Default |
-|---|---|---|
-| Commits | `never` / `ask` / `auto` | `never` |
-| Pull request text | `ask` / `always` / `never` | `ask` |
-| May Flow start the dev server? | `no` / `yes, on a free port` | `no` |
-| Guidance level | `short` / `full` | `short` |
-| Run size | `light` / `standard` / `full` | `standard` |
-
-## Using one skill alone
-
-A skill that runs alone has no brief and no plan. So each skill sorts its inputs
-into three groups: what it must have, what it uses if it exists, and what it
-does when nothing exists.
-
-| Skill | Must have | Better with | With nothing else |
-|---|---|---|---|
-| `review` | The branch diff | `house-rules.md`, `plan.md` | Reviews for defects only, and says it did not check the purpose. |
-| `prove-it` | The diff and a running server | `proof.md`, `plan.md` | Proves "no errors on what the diff reaches". Finds the login itself, or reports `could-not-run`. |
-| `can-it-fail` | A diff with a new or changed test | `profile.md` | Finds the test command in the repo. |
-| `manual-test` | Something to test | `plan.md`, `proof.md` | Asks one question: "What do you want to test?" |
-| `describe-pr` | The diff and the commits | `report.md` | Writes from the diff and marks the proof section "not verified". |
-
-The diff is always enough to start. The Flow files make the result better. The
-report always says what was missing.
-
-## What Flow will not do
-
-- **Change code before you approve the plan.**
-- **Commit or push**, unless you set the commit preference to something other
-  than `never`.
-- **Call a check passed that it did not run** after the last change.
-- **Fix a bug inside a checking skill.** `prove-it`, `can-it-fail`, and `review`
-  report. A checker that fixes what it finds hides the finding.
-- **Count a mock as proof.** That includes a stand-in the agent builds itself
-  when the real service is not available.
-- **Waive a finding.** Only you can.
-- **Print a secret**, or write one into a file.
-- **Touch a shared or production environment** without you naming it.
 
 ## Does it work?
 
-Partly proven. Here is exactly what was tested and what was not.
+I tested the skills the way they tell an agent to test code: with cases where the right answer is not "passed".
 
-The [`evals/`](evals/README.md) folder holds a small API and a set of changes to
-it. Most changes have one planted defect. A skill passes when its report finds
-the defect, or says it could not check. Each run is a fresh, unattended agent
-session with no user settings and no knowledge of the expected answer.
+The [`evals/`](evals/README.md) folder has a small API and a set of changes to it, most with one planted bug. Each run is a fresh, unattended agent session that has never seen the expected answer.
 
-| Scenario | The correct answer | Skills |
-|---|---|---|
-| Any user can archive another user's note. Unit tests are green. | `failed` | `prove-it`, `review` |
-| One of three new tests cannot fail. | `failed` for that test | `can-it-fail` |
-| Login needs a service that is not available. | `could-not-run` | `prove-it` |
-| A correct change. | `passed`, with no false alarm | `prove-it`, `review`, `can-it-fail` |
-| A full task, in two messages. | Stops at the plan gate, then delivers | `flow` |
-| First run in a repo. | Writes nothing before a yes | `onboard` |
+**The first round got 6 of 10.** The skills found every planted bug, and then hid most of them. That is where failure #4 above comes from. A small model also built its own fake login service and counted 17 passes against it.
 
-**The first round got 6 of 10 right.** The skills found every planted defect,
-and then hid most of them:
+**After one short rule for each gap, the second round got 14 of 14**, on a large model and a small one. **The same set in Codex got 9 of 9.**
 
-- `prove-it` found the bug, fixed it, ran again, and reported "6 passed, 0
-  failed". Nothing in the skill said not to.
-- With no login service, a small model built a fake one and counted 17 passes
-  against it.
-- `can-it-fail` also fixed a bug and wrote a new test, which was not its job.
-- One scenario I wrote as "correct" had a real bug. `review` found it.
-
-Each gap was fixed with one short rule. **The second round got 14 of 14 right**,
-on a large model and a small one.
-
-**The same set then ran in the Codex CLI and got 9 of 9.** Codex found every
-planted defect, changed no code in the checking skills, and stopped at the plan
-gate. On one scenario it was stricter than the expected answer: it also failed a
-test that never reads the response body. The full `flow` run in Codex ended
-before its last message because the session hit a usage limit, so that result
-comes from the report file it wrote.
-
-All three sets are in [`evals/results`](evals/results), as the agents wrote
-them.
-
-What this does not show: the second round ran the same scenarios as the first,
-so it proves the fixes work on those cases, not on new ones. Each case ran once
-or twice, and models vary between runs. The demo API is five files.
-
-| Skill | Status |
-|---|---|
-| `prove-it`, `can-it-fail`, `review` | Tested on scenarios, in Claude Code (two models) and Codex |
-| `flow`, `onboard` | Tested with one chain run each, in Claude Code and Codex |
-| `evidence` | Tested through the skills that load it |
-| `explore`, `describe-pr` | Ran inside `flow` only |
-| `manual-test`, `design-check`, `house-rules`, `parallel` | Written, not tested |
-
-Run the evals yourself:
+All of it is in [`evals/results`](evals/results), failures included. Do not read too much into it: the second round reran the same cases, each case ran once or twice, and the demo API is five files. Run them yourself:
 
 ```bash
-evals/run.sh archive-cross-user prove-it         # one skill on one scenario
-evals/run.sh weak-test can-it-fail haiku         # the same, on a small model
-evals/run-chain.sh flow-archive                  # the full chain, with its gate
-evals/run.sh archive-cross-user prove-it codex   # the same scenario in Codex
+evals/run.sh archive-cross-user prove-it          # one skill, one planted bug
+evals/run.sh archive-cross-user prove-it codex    # the same, in Codex
+evals/run-chain.sh flow-archive                   # the whole chain, with its gate
 ```
 
-You need [Bun](https://bun.sh) and the Claude Code CLI, or the Codex CLI. A
-single skill run is cheap. A full `flow` run is not: see Limits. See [`evals/README.md`](evals/README.md).
+## Reference
+
+### The chain
+
+- **[flow](skills/flow/SKILL.md)**: Takes a task from the request to a proven change. Runs the skills below in order, with two human gates.
+- **[onboard](skills/onboard/SKILL.md)**: Reads a repo once and writes down how to test, run, and log in, plus your team's preferences.
+- **[explore](skills/explore/SKILL.md)**: Scopes a task before any plan. Finds the one risky assumption and tests it on the real system. Read-only.
+
+### The checks
+
+- **[can-it-fail](skills/can-it-fail/SKILL.md)**: Breaks the code under each new test and checks that the test goes red.
+- **[prove-it](skills/prove-it/SKILL.md)**: Calls the endpoints the diff reaches, on the running server, as a real user.
+- **[review](skills/review/SKILL.md)**: Read-only review of the branch diff, one focus at a time. Every finding is checked against the source before it is reported.
+- **[evidence](skills/evidence/SKILL.md)**: The four result words, and what does not count as a pass. The other skills load it.
+
+### Around the chain
+
+- **[describe-pr](skills/describe-pr/SKILL.md)**: Pull request text from the real diff. Never invents a test result.
+- **[design-check](skills/design-check/SKILL.md)**: Measures the rendered page against the design, in pixels and colors. *Not tested yet.*
+- **[manual-test](skills/manual-test/SKILL.md)**: Seeds the data, logs in, opens the page. You only test. *Not tested yet.*
+- **[house-rules](skills/house-rules/SKILL.md)**: Turns the review comments your team keeps repeating into rules that `review` applies. *Not tested yet.*
+- **[parallel](skills/parallel/SKILL.md)**: Runs several tasks at once, each in its own worktree. *Not tested yet.*
 
 ## Limits
 
-- **Flow raises the floor, not the ceiling.** It makes a weak result visible. It
-  does not make a weak plan good. The plan gate is only as good as the person
-  who reads the plan.
-- **It costs tokens.** A full run uses several agent sessions, and each one
-  loads its own context. One full `flow` run on the five-file demo moved about
-  two million tokens in the main session alone, most of it cached input, and
-  about four million with the agents it started. A single skill such as
-  `review` or `prove-it` used about twenty thousand new tokens. Use `light` for
-  a small fix, or run one skill.
-- **It owns the process.** While `flow` runs, it decides the order of work. If
-  you want to drive every step yourself, use the skills one at a time.
-- **`prove-it` is for HTTP backends.** Other kinds of change need their own
-  proof step.
-- **`parallel` depends on your tool.** It needs sessions that run at the same
-  time in separate working directories.
-
-## Design notes
-
-**A skill is a contract, not a script.** Each one states the goal, the proof it
-must show, and what does not count as done. It does not walk the agent through
-every step. A capable model does not need the steps, and a list of steps goes
-stale.
-
-**Every rule has its reason next to it.** "Do not fix the bug you found" is easy
-to ignore. "A report that says 'all passed, after I fixed it' hides the one
-thing the reader needed to know" is not.
-
-**Fixed formats only where something reads them.** The proof table and the run
-files have a format because another skill or a person scans them. The rest is
-left to the agent.
-
-**The repo holds the memory.** What Flow learns about a codebase lives in
-`.flow/` as committed markdown, where the team can read it, correct it, and
-review changes to it. Nothing is stored in a hidden place.
-
-**The evals are part of the product.** A skill is a claim about how an agent
-will behave. Without a test, it is a guess.
+- **It raises the floor, not the ceiling.** Flow makes a bad result visible. It does not make a bad plan good. Gate A is only as good as the person reading the plan.
+- **A full run is expensive.** `flow` starts several agent sessions and each one loads its own context. One run on the demo API moved about four million tokens, most of them cached. A single check like `review` or `prove-it` used about twenty thousand. For a small fix, run the checks alone.
+- **`prove-it` is for HTTP backends.** Other kinds of change need their own proof step.
+- **Four skills are drafts.** They are marked above. They are written from the same rules and have not been run against a scenario.
 
 ## Contributing
 
-A change to a skill comes with a scenario that shows why. If you found a case
-where a skill reports a false pass, that is the most useful thing you can send:
-add the scenario under `evals/scenarios/`, with the change, the task, and the
-expected result.
-
-Keep skills short, keep the reason next to each rule, and keep anything specific
-to one team or one stack out of them. Team-specific knowledge belongs in a
-repo's `.flow/` folder.
+The most useful thing you can send is a case where a skill reports a false pass. Add it under `evals/scenarios/` with the change, the task, and the expected result. A change to a skill should come with the scenario that shows why.
 
 ## License
 
