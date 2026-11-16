@@ -28,10 +28,25 @@ the first message must end at a stop, and the second gives the approval.
 evals/run-chain.sh flow-archive sonnet
 ```
 
+## Other agents
+
+Pass `codex` as the model to run the same scenario or chain in the Codex CLI:
+
+```
+evals/run.sh archive-cross-user prove-it codex
+evals/run-chain.sh flow-archive codex
+```
+
+Codex reads project skills from `.agents/skills`, so the runner installs them
+there. Two differences from the Claude Code runs: Codex has no flag to skip the
+user's own instructions file, so that file loads, and a chain saves its session
+to the Codex history so the second message can resume it.
+
 ## Results
 
 `results/round-1` is the first run. It exposed three gaps in the skills and one
 mistake in a scenario. `results/round-2` is the run after the fixes.
+`results/codex` is the same set in the Codex CLI.
 
 ## Before you run
 
