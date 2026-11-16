@@ -32,7 +32,7 @@ A failure is not a bad report. **An untested case presented as a pass is.**
 
 ## Get started
 
-You need Git and **[Claude Code](https://code.claude.com/docs/en/overview)** or **[Codex](https://learn.chatgpt.com/docs/cli)**. Flow's skills are Markdown files; you don't need to install a separate Flow runtime.
+You need **[Claude Code](https://code.claude.com/docs/en/overview)** or **[Codex](https://learn.chatgpt.com/docs/cli)**. Flow's skills are Markdown files; you don't need to install a separate Flow runtime.
 
 <details open>
 <summary><strong>Claude Code</strong></summary>
@@ -40,9 +40,7 @@ You need Git and **[Claude Code](https://code.claude.com/docs/en/overview)** or 
 From the root of the project where you want to use Flow:
 
 ```bash
-git clone https://github.com/miguelpinero/flow.git /tmp/flow
-mkdir -p .claude/skills
-cp -R /tmp/flow/skills/* .claude/skills/
+mkdir -p .claude/skills && curl -sL https://github.com/miguelpinero/flow/archive/main.tar.gz | tar -xz --strip-components=2 -C .claude/skills flow-main/skills
 ```
 
 Open Claude Code in that project, then:
@@ -70,9 +68,7 @@ To make skills available in every repository, install them in `~/.claude/skills/
 From the root of the project where you want to use Flow:
 
 ```bash
-git clone https://github.com/miguelpinero/flow.git /tmp/flow
-mkdir -p .agents/skills
-cp -R /tmp/flow/skills/* .agents/skills/
+mkdir -p .agents/skills && curl -sL https://github.com/miguelpinero/flow/archive/main.tar.gz | tar -xz --strip-components=2 -C .agents/skills flow-main/skills
 ```
 
 Then invoke the skills in Codex with the `$` prefix:
@@ -94,8 +90,7 @@ To make skills available in every project, install them in `~/.agents/skills/` i
 Every standalone check uses the shared `evidence` reporting rules. For example, to install **only** the review skill for Claude Code:
 
 ```bash
-mkdir -p .claude/skills
-cp -R /tmp/flow/skills/review /tmp/flow/skills/evidence .claude/skills/
+mkdir -p .claude/skills && curl -sL https://github.com/miguelpinero/flow/archive/main.tar.gz | tar -xz --strip-components=2 -C .claude/skills flow-main/skills/review flow-main/skills/evidence
 ```
 
 For Codex, replace `.claude/skills` with `.agents/skills`. For the complete `/flow` or `$flow` chain, install the full collection.
