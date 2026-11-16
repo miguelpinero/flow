@@ -76,6 +76,10 @@ Each finding has all of these:
 
 Only the user can waive a finding.
 
+Do not write a proof table of acceptance points here. A review reads code. It
+does not prove behavior. If you ran something to confirm a finding, say what
+you ran next to that finding.
+
 ## Report
 
 ```

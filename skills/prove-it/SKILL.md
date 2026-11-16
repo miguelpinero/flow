@@ -26,11 +26,24 @@ These are not a pass:
 - A unit test, or any test with the changed code mocked.
 - A `200` where you did not look at the body or the saved state.
 - One request. One request proves one case, not the change.
+- A request that passed against a stand-in you built for something you could
+  not reach, such as a fake login service. That is a mock. List what it showed
+  under "Also seen", and mark the case `could-not-run`.
 
 If you cannot log in, or the server is not reachable, the result is
 `could-not-run`. Say what blocked you and stop. Do not build a green report from
 smaller signals. A false pass is worse than no result, because it ships a bug
 with an approval on it.
+
+## You do not change the code
+
+You test the branch as it is. You do not edit a source file or a test.
+
+When a case fails, the result is `failed`. Do not fix the code and run again.
+The first line of your report counts the results for the branch as you found
+it. A fix belongs to a separate step: inside `flow` it goes back to build, and
+alone you describe the fix and stop. A report that says "all passed, after I
+fixed it" hides the one thing the reader needed to know.
 
 ## What you need
 

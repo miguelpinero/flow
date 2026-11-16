@@ -70,6 +70,9 @@ a pass.
   and tell the user exactly which file differs.
 - Do not fix a weak test here. Report it with the reason: what you broke, and
   what the test asserts instead. The fix is a separate step.
+- The breaks are the only edits you make, and you undo each one. Do not fix a
+  defect, add a test, or improve the code, even when you see how. Write what
+  you saw under "Also seen" and leave it.
 - Do not commit anything.
 
 ## Report
@@ -83,6 +86,9 @@ a pass.
 ### Weak tests
 - <test>: I <break>. The test still passed because it asserts <what>.
   It needs an assertion on <what>.
+
+### Also seen
+- <a defect or a missing test you noticed and did not touch>
 
 Working tree restored: yes, checked against the saved patch.
 ```

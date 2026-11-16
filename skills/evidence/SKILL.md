@@ -39,6 +39,13 @@ None of these is proof that the behavior works:
 - A check that ran before the last change. Run it again or mark it `not-run`.
 - A success status with no look at the response body or the saved state.
 - A check that covered part of the change, reported as if it covered all of it.
+- A check against a stand-in that you built because the real thing was not
+  available: a fake login service, a stub of another system. That is a mock.
+  Report what it showed under its own name, and mark the real check
+  `could-not-run`.
+- A result you got after you changed the code you were asked to check. If you
+  were asked to check a change and you fixed it first, the result for the
+  change is still `failed`.
 - "It should work."
 
 When you are not sure a check counts, it does not count. Say what you ran and
