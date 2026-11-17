@@ -23,6 +23,10 @@ not soften one ("mostly passed", "passed with notes").
 | `not-run` | You decided not to run the check. | The reason. |
 | `could-not-run` | You tried to run the check and something stopped you. | What stopped you, and what would unblock it. |
 
+The difference between the last two: `not-run` is your own choice. When the
+user's rules or the environment do not permit a check, the result is
+`could-not-run`, even if you never tried it. Say who or what ruled it out.
+
 `not-run` and `could-not-run` are honest results. They are not failures to hide.
 A report with three `passed` and one `could-not-run` is a good report. A report
 with four `passed` where one was never run is a false report.
@@ -51,6 +55,13 @@ None of these is proof that the behavior works:
 When you are not sure a check counts, it does not count. Say what you ran and
 let the reader decide.
 
+## Failures that were there before
+
+A check that already failed before the change is still `failed`. Do not hide it
+and do not round it up. Report it in its own group, "failed before the change",
+with the run from before the change as proof. Without a run from before the
+change, you cannot claim that the failure is old.
+
 ## The proof table
 
 A final report maps each acceptance point to its proof. One row for each point.
@@ -77,7 +88,9 @@ Rules for the table:
 1. Every acceptance point has a row.
 2. Every `passed` has proof that ran after the last change.
 3. Everything you did not check is in the report, with one of the two words.
-4. The first line of the report gives the count: for example
-   "3 passed, 0 failed, 0 not-run, 1 could-not-run".
+4. The first line of the report counts the acceptance points: for example
+   "3 passed, 0 failed, 0 not-run, 1 could-not-run". If the report also lists
+   other checks, such as lint or a review, a second line counts those. Failures
+   from before the change are in neither count.
 
 Then report. Do not round the result up.

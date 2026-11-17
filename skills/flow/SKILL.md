@@ -59,7 +59,9 @@ from the base. If anything is off, stop and ask. If the repo has no `.flow/`
 folder, offer to run `onboard` first. You can continue without it, but each
 stage then has to find its own facts.
 
-Create the run folder `.flow/runs/<id>/`. Use the ticket id, or a short slug of
+Create the run folder `.flow/runs/<id>/`. If Git does not ignore `.flow/runs/`,
+add it to `.git/info/exclude`. That file is local, so no tracked file changes
+and the run files do not show up in the user's diff. Use the ticket id, or a short slug of
 the task. If the folder exists with valid files, resume after the last finished
 stage. Do not repeat a finished stage.
 
@@ -78,7 +80,9 @@ Write `plan.md` yourself from the brief:
 - **Acceptance points** from the brief, each with the proof you will collect.
 - **Options** when a real choice exists, with your recommendation.
 - **Other problems found**, each marked: required, optional, or separate task.
-- **Open decisions** for the user.
+- **Open decisions** for the user, each with your recommended answer. Then a
+  plain "approved" covers every decision. A decision with no recommendation
+  is not covered by it: ask again, or mark what depends on it `could-not-run`.
 
 Then start one fresh agent as a challenger. It reads the brief and the plan and
 looks for what is missing, what is too large, and what the plan assumes without
@@ -90,6 +94,10 @@ Print the full plan in the conversation. A file path is not enough. Stop.
 Continue only on a clear yes.
 
 ## Stage 3: build
+
+Before the first edit, run the checks you will use later (tests, lint, type
+check) one time and save the result in `baseline.md`. A failure that is already
+in the baseline did not come from this change, and the report keeps it apart.
 
 Start a fresh agent with the brief and the plan. For a behavior change it
 writes the test first. It runs lint and type check on what it touched. If new
@@ -109,7 +117,10 @@ skip a step only when it does not apply:
 | Review | `review` | Always |
 | A person tries it | `manual-test` | The user asks, or the plan says so |
 
-Each skill writes its result to `checks/<skill>.md`.
+Each skill writes its result to `checks/<skill>.md`. This also applies when you
+run a check yourself in the main thread: write its file before you go on. Do
+not start the report while a check that ran has no file. The report is only as
+good as the files a reader can open.
 
 **Fix loop.** A `failed` check or a `blocker` or `high` finding goes back to a
 build agent with the result file. Then run the failed checks again. Three build
@@ -121,7 +132,9 @@ give the open items to the user.
 Write `report.md`, titled "Evidence report", with the proof table from the
 `evidence` skill: each
 acceptance point, its proof, its result. First line: the count of each result
-word. Then: what changed, what is still open, and what the user should look at
+word for the acceptance points. Second line: the same count for the other
+checks. Failures that are in `baseline.md` go in their own group, in neither
+count. Then: what changed, what is still open, and what the user should look at
 first.
 
 Then follow the pull request preference. With `ask`, or with no profile, ask:

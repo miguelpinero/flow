@@ -41,13 +41,16 @@ ticket, a result file. If you did not read it, do not write it.
   changed and say the reason was not available.
 - Short sentences. Plain words. No praise for the change.
 - No secret, no personal data, no customer name.
+- No signature. Do not add a "generated with" line, a tool name, or a
+  co-author line, unless the repo's own template asks for one. The text goes
+  out under the author's name.
 - Print the text in the conversation. Do not open, edit, or comment on a pull
   request unless the user asks you to.
 
 ## Output
 
-Write `.flow/runs/<id>/pr.md` if a run folder exists, and print it in a code
-block so the user can copy it.
+Write `.flow/runs/<id>/pr.md` if a run folder exists. Use that exact file name.
+Print the text in a code block so the user can copy it.
 
 ```
 <title>

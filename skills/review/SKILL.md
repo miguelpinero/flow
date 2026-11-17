@@ -30,7 +30,7 @@ parallel, one lens each. Pick lenses by what the diff touches.
 
 | Lens | Run it when | It asks |
 |---|---|---|
-| Correctness | Always | Does the code do what it claims? Wrong condition, missing case, wrong order, unhandled error. |
+| Correctness | Always | Does the code do what it claims? Wrong condition, missing case, wrong order, unhandled error. Read each new error response as the caller will see it. |
 | Access and data | The diff touches a route, a query, a permission, or user data | Can a user reach or change what is not theirs? Is input checked on the server? Does a secret or personal data leak into a response or a log? |
 | Tests | The diff changes behavior | Is the new behavior tested? Would the test fail if the behavior broke? |
 | Fit | Always | Does the change follow `.flow/house-rules.md` and the patterns of the files around it? Does it contain changes that do not belong to it? |
